@@ -8,10 +8,10 @@ const PORT = process.env.PORT || 5000;
 connectDB();
 
 const server = app.listen(PORT, () => {
-  console.log(`CodeVault Server Running on port ${PORT}`);
+  console.log(`PrepSnippet Server Running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`MongoDB: ${process.env.MONGODB_URI ? 'Connected' : 'Not configured'}`);
-  console.log(`Gemini API: ${process.env.GEMINI_API_KEY ? 'Configured' : 'Not configured'}`);
+  console.log(`llama3 API: ${process.env.GROQ_API_KEY ? 'Configured' : 'Not configured'}`);
 });
 
 process.on('unhandledRejection', (err) => {
