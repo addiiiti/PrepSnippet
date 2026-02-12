@@ -71,18 +71,14 @@ const snippetSchema = new mongoose.Schema({
   },
   
   // Interview mode fields
-  interviewQuestion: {
-    type: String,
-    default: ''
-  },
-  interviewAnswer: {
-    type: String,
-    default: ''
-  },
-  interviewFollowUp: {
-    type: String,
-    default: ''
-  },
+  interviewQuestions: [{
+    question: {
+      type: String
+    },
+    answer: {
+      type: String
+    }
+  }],
   
   createdAt: {
     type: Date,

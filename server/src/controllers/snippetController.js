@@ -108,7 +108,7 @@ const getSnippet = async (req, res, next) => {
  */
 const createSnippet = async (req, res, next) => {
   try {
-    const { title, code, language, customTags, notes } = req.body;
+    const { title, code, language, customTags, notes, aiTags, aiExplanation, complexity, interviewQuestions } = req.body;
 
     // Validation
     if (!title || !code) {
@@ -121,8 +121,15 @@ const createSnippet = async (req, res, next) => {
     // Auto-detect language if not provided
     const detectedLang = language || detectLanguage(code);
 
-    // Analyze code with AI
-    const aiAnalysis = await analyzeSnippet(code, detectedLang);
+    // Use provided AI analysis or generate new one
+    let aiAnalysis;
+    if (aiTags && aiExplanation && complexity) {
+      // Use pre-generated AI fields
+      aiAnalysis = { aiTags, aiExplanation, complexity };
+    } else {
+      // Analyze code with AI
+      aiAnalysis = await analyzeSnippet(code, detectedLang);
+    }
 
     // Create snippet
     const snippet = await Snippet.create({
@@ -132,6 +139,7 @@ const createSnippet = async (req, res, next) => {
       language: detectedLang,
       customTags: customTags || [],
       notes: notes || '',
+      interviewQuestions: interviewQuestions || [],
       ...aiAnalysis
     });
 
@@ -199,6 +207,64 @@ const updateSnippet = async (req, res, next) => {
 };
 
 /**
+ * @desc    Analyze code with AI (preview without saving)
+ * @route   POST /api/snippets/analyze
+ * @access  Private
+ */
+const analyzeCode = async (req, res, next) => {
+  try {
+    const { code, language } = req.body;
+
+    // Validation
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Code is required'
+      });
+    }
+
+    // Auto-detect language if not provided
+    const detectedLang = language || detectLanguage(code);
+
+    // Analyze code with AI
+    const aiAnalysis = await analyzeSnippet(code, detectedLang);
+
+    // Generate interview Q&A
+    const interviewData = await generateInterview(
+      code,
+      detectedLang,
+      aiAnalysis.aiExplanation
+    );
+
+    // Format interview questions
+    let interviewQuestions = null;
+    if (interviewData) {
+      interviewQuestions = [
+        {
+          question: interviewData.question,
+          answer: interviewData.answer
+        },
+        {
+          question: interviewData.followUp,
+          answer: "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
+        }
+      ];
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        language: detectedLang,
+        ...aiAnalysis,
+        interviewQuestions
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Delete snippet
  * @route   DELETE /api/snippets/:id
  * @access  Private
@@ -258,16 +324,24 @@ const generateInterviewMode = async (req, res, next) => {
     }
 
     // Generate interview Q&A
-    const interviewQA = await generateInterview(
+    const interviewData = await generateInterview(
       snippet.code, 
       snippet.language, 
       snippet.aiExplanation
     );
 
-    if (interviewQA) {
-      snippet.interviewQuestion = interviewQA.question;
-      snippet.interviewAnswer = interviewQA.answer;
-      snippet.interviewFollowUp = interviewQA.followUp;
+    if (interviewData) {
+      // Store as array format that frontend expects
+      snippet.interviewQuestions = [
+        {
+          question: interviewData.question,
+          answer: interviewData.answer
+        },
+        {
+          question: interviewData.followUp,
+          answer: "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
+        }
+      ];
       await snippet.save();
     }
 
@@ -275,11 +349,7 @@ const generateInterviewMode = async (req, res, next) => {
       success: true,
       message: 'Interview mode generated',
       data: { 
-        interview: {
-          question: snippet.interviewQuestion,
-          answer: snippet.interviewAnswer,
-          followUp: snippet.interviewFollowUp
-        }
+        interviewQuestions: snippet.interviewQuestions
       }
     });
   } catch (error) {
@@ -293,5 +363,6 @@ module.exports = {
   createSnippet,
   updateSnippet,
   deleteSnippet,
-  generateInterviewMode
+  generateInterviewMode,
+  analyzeCode
 };

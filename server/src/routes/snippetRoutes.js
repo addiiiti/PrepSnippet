@@ -6,7 +6,8 @@ const {
   createSnippet,
   updateSnippet,
   deleteSnippet,
-  generateInterviewMode
+  generateInterviewMode,
+  analyzeCode
 } = require('../controllers/snippetController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -17,6 +18,9 @@ router.use(protect);
 router.route('/')
   .get(getSnippets)      // GET /api/snippets
   .post(createSnippet);  // POST /api/snippets
+
+// Analyze code (must be before /:id route)
+router.post('/analyze', analyzeCode); // POST /api/snippets/analyze
 
 router.route('/:id')
   .get(getSnippet)       // GET /api/snippets/:id

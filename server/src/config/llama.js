@@ -9,13 +9,13 @@ const groq = new Groq({
 const LLAMA_MODEL = 'llama-3.1-8b-instant';
 
 /**
- * Generate tags for code snippet
+ * Generate tags for code snippet - LIMITED to 2-3 tags only
  */
 async function generateTags(code, language) {
   try {
-    const prompt = `Analyze this ${language} code and provide 5-7 relevant tags. 
-Include tags for: programming concepts, patterns, difficulty level, use cases.
-Return ONLY a comma-separated list of tags, no explanation.
+    const prompt = `Analyze this ${language} code and provide exactly 2-3 most relevant tags only.
+Choose the MOST important tags from: programming concepts, patterns, difficulty level, or primary use case.
+Return ONLY a comma-separated list of 2-3 tags, no explanation.
 
 Code:
 ${code}
@@ -31,17 +31,17 @@ Tags:`;
       ],
       model: LLAMA_MODEL,
       temperature: 0.3,
-      max_tokens: 200,
+      max_tokens: 100,
     });
 
     const text = completion.choices[0]?.message?.content || '';
     
-    // Parse comma-separated tags
+    // Parse comma-separated tags - STRICT limit to 3 tags maximum
     const tags = text
       .split(',')
       .map(tag => tag.trim().toLowerCase())
-      .filter(tag => tag.length > 0)
-      .slice(0, 7);
+      .filter(tag => tag.length > 0 && tag.length < 30) // Filter out overly long tags
+      .slice(0, 3); // HARD LIMIT: Maximum 3 tags
     
     return tags;
   } catch (error) {
@@ -51,16 +51,13 @@ Tags:`;
 }
 
 /**
- * Generate explanation for code snippet
+ * Generate SHORT and CONCISE explanation for code snippet
  */
 async function generateExplanation(code, language) {
   try {
-    const prompt = `Explain this ${language} code in simple, clear terms.
-
-Structure your explanation as:
-1. What it does (1-2 sentences)
-2. How it works (step-by-step, 3-5 points)
-3. Time and space complexity (if applicable)
+    const prompt = `Explain this ${language} code in 1-2 short sentences only. Be direct and concise.
+Just describe what the code does without any headers, sections, or bullet points.
+Do not include "Description:", "Use Cases:", or any other labels.
 
 Code:
 ${code}
@@ -75,13 +72,25 @@ Explanation:`;
         }
       ],
       model: LLAMA_MODEL,
-      temperature: 0.5,
-      max_tokens: 1000,
+      temperature: 0.3, 
+      max_tokens: 150, // Reduced from 500 to force shorter responses
     });
 
-    const text = completion.choices[0]?.message?.content || '';
-    
-    return text.trim();
+    let text = completion.choices[0]?.message?.content || '';
+
+    // Remove any headers or labels that might be added
+    text = text.replace(/^(Description|Explanation|Summary):\s*/i, '');
+    text = text.replace(/\*\*.*?\*\*/g, ''); // Remove bold markdown
+    text = text.replace(/\n{2,}/g, ' '); // Replace multiple newlines with space
+    text = text.trim();
+
+    // If still too long, truncate to first 2 sentences
+    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    if (sentences.length > 2) {
+      text = sentences.slice(0, 2).join(' ');
+    }
+
+    return text;
   } catch (error) {
     console.error('[LLaMA] Error generating explanation:', error.message || error);
     throw error;
