@@ -9,8 +9,10 @@ const Navbar = () => {
   const user = authService.getCurrentUser();
 
   const handleLogout = () => {
-    authService.logout();
-    navigate('/');
+    if (window.confirm('Are you sure you want to logout?')) {
+      authService.logout();
+      navigate('/');
+    }
   };
 
   return (
