@@ -5,6 +5,96 @@ import CodeEditor from '../components/snippet/CodeEditor';
 import Button from '../components/common/Button';
 import snippetService from '../services/snippetService';
 
+// Component to format Q&A answers with code blocks
+const FormattedAnswer = ({ answer }) => {
+  // Split answer into paragraphs and code blocks
+  const formatAnswer = (text) => {
+    const parts = [];
+    const lines = text.split('\n');
+    let currentCodeBlock = [];
+    let currentText = [];
+    
+    const flushText = () => {
+      if (currentText.length > 0) {
+        parts.push({ type: 'text', content: currentText.join('\n') });
+        currentText = [];
+      }
+    };
+    
+    const flushCode = () => {
+      if (currentCodeBlock.length > 0) {
+        parts.push({ type: 'code', content: currentCodeBlock.join('\n') });
+        currentCodeBlock = [];
+      }
+    };
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const trimmed = line.trim();
+      
+      // Detect code lines: contains typical code patterns
+      const isCodeLine = trimmed && (
+        trimmed.includes('{') || 
+        trimmed.includes('}') || 
+        trimmed.includes('(') && trimmed.includes(')') ||
+        trimmed.includes('int ') ||
+        trimmed.includes('vector') ||
+        trimmed.includes('map<') ||
+        trimmed.includes('return ') ||
+        trimmed.includes('for (') ||
+        trimmed.includes('if (') ||
+        trimmed.startsWith('//') ||
+        trimmed.endsWith(';') ||
+        trimmed.includes('yield ') ||
+        trimmed.includes('auto ') ||
+        /^\s*(public|private|protected|class|function|const|let|var|import|export)/.test(trimmed)
+      );
+      
+      if (isCodeLine) {
+        flushText();
+        currentCodeBlock.push(line);
+      } else if (trimmed === '') {
+        // Empty line
+        if (currentCodeBlock.length > 0) {
+          currentCodeBlock.push(line);
+        } else if (currentText.length > 0) {
+          currentText.push(line);
+        }
+      } else {
+        flushCode();
+        currentText.push(line);
+      }
+    }
+    
+    flushText();
+    flushCode();
+    
+    return parts;
+  };
+  
+  const parts = formatAnswer(answer);
+  
+  return (
+    <div className="space-y-3">
+      {parts.map((part, index) => {
+        if (part.type === 'code') {
+          return (
+            <pre key={index} className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto">
+              <code className="text-sm font-mono">{part.content}</code>
+            </pre>
+          );
+        } else {
+          return (
+            <p key={index} className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {part.content}
+            </p>
+          );
+        }
+      })}
+    </div>
+  );
+};
+
 const AddSnippet = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
@@ -376,9 +466,10 @@ const AddSnippet = () => {
                         </button>
                       </div>
                       {visibleAnswers.includes(index) && (
-                        <p className="text-gray-700 leading-relaxed mt-2">
-                          A: {qa.answer}
-                        </p>
+                        <div className="mt-3">
+                          <span className="font-semibold text-gray-900">A: </span>
+                          <FormattedAnswer answer={qa.answer} />
+                        </div>
                       )}
                     </div>
                   ))}
