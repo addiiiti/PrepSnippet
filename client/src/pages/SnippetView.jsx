@@ -9,7 +9,8 @@ import {
   EyeOff,
   Calendar,
   Code2,
-  RefreshCw
+  RefreshCw,
+  Edit2
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import snippetService from '../services/snippetService';
@@ -242,6 +243,13 @@ const SnippetView = () => {
           </div>
 
           <div className="flex gap-2">
+            <button
+              onClick={() => navigate(`/edit-snippet/${id}`)}
+              className="p-2 bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300 rounded-lg transition-all"
+              title="Edit snippet"
+            >
+              <Edit2 className="w-5 h-5 text-gray-600" />
+            </button>
             <button
               onClick={handleToggleFavorite}
               disabled={togglingFavorite}

@@ -7,6 +7,7 @@ import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import Dashboard from './pages/Dashboard'
 import AddSnippet from './pages/AddSnippet'
+import EditSnippet from './pages/EditSnippet'
 import SnippetView from './pages/SnippetView'
 import authService from './services/authService'
 
@@ -47,6 +48,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <AddSnippet />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/edit-snippet/:id" 
+            element={
+              <ProtectedRoute>
+                <EditSnippet />
               </ProtectedRoute>
             } 
           />
