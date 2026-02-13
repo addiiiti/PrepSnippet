@@ -31,6 +31,11 @@ const snippetService = {
     return response.data;
   },
 
+  toggleFavorite: async (id, isFavorite) => {
+    const response = await api.put(`/snippets/${id}`, { isFavorite });
+    return response.data;
+  },
+
   generateInterview: async (id) => {
     const response = await api.post(`/snippets/${id}/interview`);
     return response.data;

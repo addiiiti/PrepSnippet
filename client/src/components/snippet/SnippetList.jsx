@@ -2,7 +2,7 @@ import React from 'react';
 import { Code2 } from 'lucide-react';
 import SnippetCard from './SnippetCard';
 
-const SnippetList = ({ snippets, loading, onDelete }) => {
+const SnippetList = ({ snippets, loading, onDelete, onToggleFavorite }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -28,7 +28,12 @@ const SnippetList = ({ snippets, loading, onDelete }) => {
   return (
     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
       {snippets.map((snippet) => (
-        <SnippetCard key={snippet._id} snippet={snippet} onDelete={onDelete} />
+        <SnippetCard 
+          key={snippet._id} 
+          snippet={snippet} 
+          onDelete={onDelete}
+          onToggleFavorite={onToggleFavorite}
+        />
       ))}
     </div>
   );

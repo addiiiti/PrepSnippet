@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Code2, Star, Eye, Calendar, Trash2 } from 'lucide-react';
 
-const SnippetCard = ({ snippet, onDelete }) => {
+const SnippetCard = ({ snippet, onDelete, onToggleFavorite }) => {
   const formattedDate = new Date(snippet.createdAt).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -13,6 +13,14 @@ const SnippetCard = ({ snippet, onDelete }) => {
     e.preventDefault();
     e.stopPropagation();
     onDelete(snippet._id);
+  };
+
+  const handleToggleFavorite = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onToggleFavorite) {
+      onToggleFavorite(snippet._id, !snippet.isFavorite);
+    }
   };
 
   return (
@@ -32,9 +40,19 @@ const SnippetCard = ({ snippet, onDelete }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {snippet.isFavorite && (
-              <Star className="w-5 h-5 text-yellow-500 fill-yellow-500" />
-            )}
+            <button
+              onClick={handleToggleFavorite}
+              className="p-1.5 hover:bg-yellow-50 rounded-lg transition-colors group/favorite"
+              title={snippet.isFavorite ? "Remove from favorites" : "Add to favorites"}
+            >
+              <Star 
+                className={`w-4 h-4 transition-colors ${
+                  snippet.isFavorite 
+                    ? 'text-yellow-500 fill-yellow-500' 
+                    : 'text-gray-400 group-hover/favorite:text-yellow-500'
+                }`} 
+              />
+            </button>
             <button
               onClick={handleDelete}
               className="p-1.5 hover:bg-red-50 rounded-lg transition-colors group/delete"

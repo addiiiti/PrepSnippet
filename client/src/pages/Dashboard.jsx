@@ -62,6 +62,25 @@ const Dashboard = () => {
     }
   };
 
+  const handleToggleFavorite = async (snippetId, isFavorite) => {
+    try {
+      // Optimistically update UI
+      setSnippets(prevSnippets => 
+        prevSnippets.map(s => 
+          s._id === snippetId ? { ...s, isFavorite } : s
+        )
+      );
+      
+      // Make API call
+      await snippetService.toggleFavorite(snippetId, isFavorite);
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert by refetching
+      fetchSnippets();
+      alert('Failed to update favorite. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen px-4 py-8 bg-gray-50">
       <div className="max-w-7xl mx-auto">
@@ -101,7 +120,12 @@ const Dashboard = () => {
         </div>
 
         {/* Snippets Grid */}
-        <SnippetList snippets={snippets} loading={loading} onDelete={handleDelete} />
+        <SnippetList 
+          snippets={snippets} 
+          loading={loading} 
+          onDelete={handleDelete}
+          onToggleFavorite={handleToggleFavorite}
+        />
       </div>
     </div>
   );
