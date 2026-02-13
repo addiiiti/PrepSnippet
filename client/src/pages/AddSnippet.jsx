@@ -79,8 +79,6 @@ const AddSnippet = () => {
         ...generatedData
       };
       await snippetService.create(snippetData);
-      // Scroll to top before navigation
-      window.scrollTo(0, 0);
       navigate('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to save snippet');

@@ -1,7 +1,6 @@
-import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import Navbar from './components/common/Navbar'
-import Footer from './components/Footer'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
@@ -11,12 +10,24 @@ import AddSnippet from './pages/AddSnippet'
 import SnippetView from './pages/SnippetView'
 import authService from './services/authService'
 
+// Component to scroll to top on route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   const isAuthenticated = authService.isAuthenticated();
 
   return (
     <Router basename={import.meta.env.BASE_URL}>
       <div className="min-h-screen bg-white">
+        <ScrollToTop />
         <Navbar />
         <Routes>
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />} />
@@ -48,7 +59,6 @@ function App() {
             } 
           />
         </Routes>
-        <Footer />
       </div>
     </Router>
   )

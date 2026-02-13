@@ -11,11 +11,6 @@ const Dashboard = () => {
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
-    // Scroll to top when dashboard loads
-    window.scrollTo(0, 0);
-  }, []);
-
-  useEffect(() => {
     fetchSnippets();
   }, [searchQuery, filter]);
 
