@@ -144,13 +144,14 @@ Required JSON format (respond with ONLY this JSON object):
 {
   "question": "A realistic technical interview question about ${type1} (1-2 sentences)",
   "answer": "A thorough, detailed answer with examples and explanation (4-6 sentences minimum, covering reasoning, implementation details, and implications)",
-  "followUp": "A challenging follow-up question about ${type2} (1-2 sentences)"
+  "followUp": "A challenging follow-up question about ${type2} (1-2 sentences)",
+  "followUpAnswer": "A comprehensive answer to the follow-up question (4-6 sentences minimum, with specific technical details and code examples where relevant)"
 }
 
 IMPORTANT:
-- Make answers COMPREHENSIVE and DETAILED with technical depth
-- Include specific examples from the code
-- Explain the "why" not just the "what"
+- Make ALL answers COMPREHENSIVE and DETAILED with technical depth
+- Include specific examples from the code in BOTH answers
+- Explain the "why" not just the "what" in BOTH answers
 - Each regeneration should produce DIFFERENT questions
 - DO NOT include any text before or after the JSON object.`;
 
@@ -163,7 +164,7 @@ IMPORTANT:
       ],
       model: LLAMA_MODEL,
       temperature: 0.9, // Increased for more variety
-      max_tokens: 1200, // Increased for longer answers
+      max_tokens: 1500, // Increased for longer answers with follow-up answer
     });
 
     const text = completion.choices[0]?.message?.content || '';
@@ -196,12 +197,14 @@ IMPORTANT:
           const questionMatch = text.match(/["\']?question["\']?\s*:\s*["\']([^"']*)["\']?/i);
           const answerMatch = text.match(/["\']?answer["\']?\s*:\s*["\']([^"']*)["\']?/i);
           const followUpMatch = text.match(/["\']?follow[_\s]?up["\']?\s*:\s*["\']([^"']*)["\']?/i);
+          const followUpAnswerMatch = text.match(/["\']?follow[_\s]?up[_\s]?answer["\']?\s*:\s*["\']([^"']*)["\']?/i);
           
           if (questionMatch || answerMatch) {
             parsed = {
               question: questionMatch ? questionMatch[1] : "How would you implement this solution?",
               answer: answerMatch ? answerMatch[1] : explanation.length > 500 ? explanation.substring(0, 500) + "..." : explanation,
-              followUp: followUpMatch ? followUpMatch[1] : "Can you optimize this further?"
+              followUp: followUpMatch ? followUpMatch[1] : "Can you optimize this further?",
+              followUpAnswer: followUpAnswerMatch ? followUpAnswerMatch[1] : "Consider analyzing the time and space complexity, look for redundant operations, and evaluate if there are more efficient data structures or algorithms that could be applied to this specific use case."
             };
           } else {
             throw new Error('Could not extract fields from response');
@@ -211,11 +214,12 @@ IMPORTANT:
     }
     
     // Validate the parsed object has required fields
-    if (parsed && typeof parsed === 'object' && parsed.question && parsed.answer && parsed.followUp) {
+    if (parsed && typeof parsed === 'object' && parsed.question && parsed.answer && parsed.followUp && parsed.followUpAnswer) {
       return {
         question: String(parsed.question).trim(),
         answer: String(parsed.answer).trim(),
-        followUp: String(parsed.followUp).trim()
+        followUp: String(parsed.followUp).trim(),
+        followUpAnswer: String(parsed.followUpAnswer).trim()
       };
     }
     
@@ -224,7 +228,8 @@ IMPORTANT:
     return {
       question: "How would you implement this solution?",
       answer: explanation.length > 500 ? explanation.substring(0, 500) + "..." : explanation,
-      followUp: "Can you optimize this further?"
+      followUp: "Can you optimize this further?",
+      followUpAnswer: "Consider analyzing the time and space complexity, look for redundant operations, and evaluate if there are more efficient data structures or algorithms that could be applied to this specific use case."
     };
     
   } catch (error) {
@@ -235,7 +240,8 @@ IMPORTANT:
       answer: explanation && explanation.length > 0 ? 
         (explanation.length > 500 ? explanation.substring(0, 500) + "..." : explanation) : 
         "This code demonstrates a practical implementation approach.",
-      followUp: "Can you optimize this further?"
+      followUp: "Can you optimize this further?",
+      followUpAnswer: "Consider analyzing the time and space complexity, look for redundant operations, and evaluate if there are more efficient data structures or algorithms that could be applied to this specific use case."
     };
   }
 }

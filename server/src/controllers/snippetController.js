@@ -246,7 +246,7 @@ const analyzeCode = async (req, res, next) => {
         },
         {
           question: interviewData.followUp,
-          answer: "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
+          answer: interviewData.followUpAnswer || "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
         }
       ];
     }
@@ -339,7 +339,7 @@ const generateInterviewMode = async (req, res, next) => {
         },
         {
           question: interviewData.followUp,
-          answer: "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
+          answer: interviewData.followUpAnswer || "Consider edge cases, time/space complexity, and potential optimizations based on your specific use case."
         }
       ];
       await snippet.save();

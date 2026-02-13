@@ -113,25 +113,27 @@ Generate:
 1. QUESTION: A realistic technical interview question about ${type1} (1-2 sentences)
 2. ANSWER: A thorough, detailed answer with examples and explanation (4-6 sentences minimum, covering reasoning, implementation details, and implications)
 3. FOLLOW_UP: A challenging follow-up question about ${type2} (1-2 sentences)
+4. FOLLOW_UP_ANSWER: A comprehensive answer to the follow-up question (4-6 sentences minimum, with specific technical details and code examples where relevant)
 
 IMPORTANT:
-- Make answers COMPREHENSIVE and DETAILED with technical depth
-- Include specific examples from the code
-- Explain the "why" not just the "what"
+- Make ALL answers COMPREHENSIVE and DETAILED with technical depth
+- Include specific examples from the code in BOTH answers
+- Explain the "why" not just the "what" in BOTH answers
 - Each regeneration should produce DIFFERENT questions
 
 Format as JSON:
 {
   "question": "...",
   "answer": "...",
-  "followUp": "..."
+  "followUp": "...",
+  "followUpAnswer": "..."
 }`;
 
     const result = await model.generateContent({
       contents: [{ role: 'user', parts: [{ text: prompt }]}],
       generationConfig: {
         temperature: 0.9, // Increased for more variety
-        maxOutputTokens: 1200, // Increased for longer answers
+        maxOutputTokens: 1500, // Increased for longer answers with follow-up answer
       },
     });
     
@@ -149,7 +151,8 @@ Format as JSON:
       return {
         question: "How would you implement this solution?",
         answer: explanation.substring(0, 200) + "...",
-        followUp: "Can you optimize this further?"
+        followUp: "Can you optimize this further?",
+        followUpAnswer: "Consider analyzing the time and space complexity, look for redundant operations, and evaluate if there are more efficient data structures or algorithms that could be applied to this specific use case."
       };
     }
   } catch (error) {
