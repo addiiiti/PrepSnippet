@@ -24,8 +24,8 @@ const SnippetCard = ({ snippet, onDelete, onToggleFavorite }) => {
   };
 
   return (
-    <Link to={`/snippet/${snippet._id}`}>
-      <div className="group bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+    <Link to={`/snippet/${snippet._id}`} className="h-full flex">
+      <div className="group bg-white border border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all duration-300 hover:scale-[1.02] cursor-pointer h-full w-full flex flex-col">
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
@@ -70,22 +70,26 @@ const SnippetCard = ({ snippet, onDelete, onToggleFavorite }) => {
           </pre>
         </div>
 
-        {/* Tags */}
-        {snippet.aiTags && snippet.aiTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {snippet.aiTags.slice(0, 3).map((tag, index) => (
-              <span
-                key={index}
-                className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-full"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        {/* Tags - Fixed height section */}
+        <div className="mb-4 min-h-[2.5rem] flex items-start">
+          {snippet.aiTags && snippet.aiTags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {snippet.aiTags.slice(0, 3).map((tag, index) => (
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-xs rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <div></div>
+          )}
+        </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-sm text-gray-500">
+        <div className="flex items-center justify-between text-sm text-gray-500 mt-auto">
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Eye className="w-4 h-4" />
