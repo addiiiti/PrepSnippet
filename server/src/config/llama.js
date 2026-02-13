@@ -102,9 +102,35 @@ Explanation:`;
  */
 async function generateInterviewQA(code, language, explanation) {
   try {
+    // Array of different question types to ensure variety
+    const questionTypes = [
+      "conceptual understanding and how this code works internally",
+      "implementation details and design choices",
+      "optimization opportunities and performance improvements",
+      "edge cases and potential bugs in this code",
+      "time and space complexity analysis",
+      "debugging approach if this code fails",
+      "comparison with alternative implementations",
+      "real-world use cases and scalability",
+      "code quality and best practices",
+      "testing strategy for this implementation"
+    ];
+    
+    // Randomly select 2 different question types for variety
+    const shuffled = questionTypes.sort(() => 0.5 - Math.random());
+    const type1 = shuffled[0];
+    const type2 = shuffled[1];
+    
+    // Add timestamp to ensure different results each time
+    const timestamp = Date.now();
+    
     const prompt = `You are a JSON generator. You MUST respond with ONLY valid JSON, no additional text, explanations, or markdown.
 
-Based on this ${language} code, generate an interview-style question and answer.
+Based on this ${language} code, generate TWO DIFFERENT interview questions focusing on:
+1. ${type1}
+2. ${type2}
+
+Make sure the questions are UNIQUE and DIFFERENT from each other. Use different perspectives and approaches.
 
 Code:
 ${code}
@@ -112,14 +138,21 @@ ${code}
 Explanation:
 ${explanation}
 
+Session ID: ${timestamp}
+
 Required JSON format (respond with ONLY this JSON object):
 {
-  "question": "A realistic interview question (1 sentence)",
-  "answer": "The answer using this code (2-3 sentences)",
-  "followUp": "One optimization or follow-up question (1 sentence)"
+  "question": "A realistic technical interview question about ${type1} (1-2 sentences)",
+  "answer": "A thorough, detailed answer with examples and explanation (4-6 sentences minimum, covering reasoning, implementation details, and implications)",
+  "followUp": "A challenging follow-up question about ${type2} (1-2 sentences)"
 }
 
-DO NOT include any text before or after the JSON object.`;
+IMPORTANT:
+- Make answers COMPREHENSIVE and DETAILED with technical depth
+- Include specific examples from the code
+- Explain the "why" not just the "what"
+- Each regeneration should produce DIFFERENT questions
+- DO NOT include any text before or after the JSON object.`;
 
     const completion = await groq.chat.completions.create({
       messages: [
@@ -129,8 +162,8 @@ DO NOT include any text before or after the JSON object.`;
         }
       ],
       model: LLAMA_MODEL,
-      temperature: 0.6,
-      max_tokens: 800,
+      temperature: 0.9, // Increased for more variety
+      max_tokens: 1200, // Increased for longer answers
     });
 
     const text = completion.choices[0]?.message?.content || '';

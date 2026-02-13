@@ -73,7 +73,33 @@ Explanation:`;
  */
 async function generateInterviewQA(code, language, explanation) {
   try {
-    const prompt = `Based on this ${language} code, generate an interview-style question and answer.
+    // Array of different question types to ensure variety
+    const questionTypes = [
+      "conceptual understanding and how this code works internally",
+      "implementation details and design choices",
+      "optimization opportunities and performance improvements",
+      "edge cases and potential bugs in this code",
+      "time and space complexity analysis",
+      "debugging approach if this code fails",
+      "comparison with alternative implementations",
+      "real-world use cases and scalability",
+      "code quality and best practices",
+      "testing strategy for this implementation"
+    ];
+    
+    // Randomly select 2 different question types for variety
+    const shuffled = questionTypes.sort(() => 0.5 - Math.random());
+    const type1 = shuffled[0];
+    const type2 = shuffled[1];
+    
+    // Add timestamp to ensure different results each time
+    const timestamp = Date.now();
+    
+    const prompt = `Based on this ${language} code, generate TWO DIFFERENT interview questions focusing on:
+1. ${type1}
+2. ${type2}
+
+Make sure the questions are UNIQUE and DIFFERENT from each other. Use different perspectives and approaches.
 
 Code:
 ${code}
@@ -81,10 +107,18 @@ ${code}
 Explanation:
 ${explanation}
 
+Session ID: ${timestamp}
+
 Generate:
-1. QUESTION: A realistic interview question (1 sentence)
-2. ANSWER: The answer using this code (2-3 sentences)
-3. FOLLOW_UP: One optimization or follow-up question (1 sentence)
+1. QUESTION: A realistic technical interview question about ${type1} (1-2 sentences)
+2. ANSWER: A thorough, detailed answer with examples and explanation (4-6 sentences minimum, covering reasoning, implementation details, and implications)
+3. FOLLOW_UP: A challenging follow-up question about ${type2} (1-2 sentences)
+
+IMPORTANT:
+- Make answers COMPREHENSIVE and DETAILED with technical depth
+- Include specific examples from the code
+- Explain the "why" not just the "what"
+- Each regeneration should produce DIFFERENT questions
 
 Format as JSON:
 {
@@ -93,7 +127,14 @@ Format as JSON:
   "followUp": "..."
 }`;
 
-    const result = await model.generateContent(prompt);
+    const result = await model.generateContent({
+      contents: [{ role: 'user', parts: [{ text: prompt }]}],
+      generationConfig: {
+        temperature: 0.9, // Increased for more variety
+        maxOutputTokens: 1200, // Increased for longer answers
+      },
+    });
+    
     const response = await result.response;
     const text = response.text();
     
