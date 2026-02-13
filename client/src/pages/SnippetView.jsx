@@ -38,46 +38,57 @@ const FormattedAnswer = ({ answer }) => {
       }
     };
     
+    // More strict code detection
+    const isCodeLine = (line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return false;
+      
+      // Must have multiple code indicators
+      const codeIndicators = [
+        trimmed.match(/^(for|while|if|else|function|const|let|var|return|class|public|private|protected)\s*[({]/),
+        trimmed.includes('{') && trimmed.includes('}'),
+        trimmed.match(/.*;\s*$/),
+        trimmed.match(/^\s*(int|void|string|bool|char|float|double|vector|map|list)\s+\w+/),
+        trimmed.startsWith('//') || trimmed.startsWith('/*'),
+        trimmed === '}' || trimmed === '{'
+      ].filter(Boolean).length;
+      
+      return codeIndicators >= 1 && (trimmed.includes('{') || trimmed.includes(';') || trimmed.includes('}') || trimmed.match(/^(int|void|return|for|if|while|function|const|let|var|class)/));
+    };
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      const trimmed = line.trim();
       
-      // Detect code lines: contains typical code patterns
-      const isCodeLine = trimmed && (
-        trimmed.includes('{') || 
-        trimmed.includes('}') || 
-        trimmed.includes('(') && trimmed.includes(')') ||
-        trimmed.includes('int ') ||
-        trimmed.includes('vector') ||
-        trimmed.includes('map<') ||
-        trimmed.includes('return ') ||
-        trimmed.includes('for (') ||
-        trimmed.includes('if (') ||
-        trimmed.startsWith('//') ||
-        trimmed.endsWith(';') ||
-        trimmed.includes('yield ') ||
-        trimmed.includes('auto ') ||
-        /^\s*(public|private|protected|class|function|const|let|var|import|export)/.test(trimmed)
-      );
-      
-      if (isCodeLine) {
+      if (isCodeLine(line)) {
         flushText();
         currentCodeBlock.push(line);
-      } else if (trimmed === '') {
-        // Empty line
+      } else if (line.trim() === '') {
+        // Empty line - add to current context
         if (currentCodeBlock.length > 0) {
           currentCodeBlock.push(line);
-        } else if (currentText.length > 0) {
+        } else {
           currentText.push(line);
         }
       } else {
-        flushCode();
+        // If we have less than 3 lines of code, treat as text
+        if (currentCodeBlock.length > 0 && currentCodeBlock.length < 3) {
+          currentText.push(...currentCodeBlock);
+          currentCodeBlock = [];
+        } else {
+          flushCode();
+        }
         currentText.push(line);
       }
     }
     
-    flushText();
-    flushCode();
+    // Final flush - only keep code blocks with 3+ lines
+    if (currentCodeBlock.length < 3) {
+      currentText.push(...currentCodeBlock);
+      flushText();
+    } else {
+      flushCode();
+      flushText();
+    }
     
     return parts;
   };
