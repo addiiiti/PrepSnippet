@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import authService from '../../services/authService';
 
 const LoginForm = () => {
@@ -86,9 +86,9 @@ const LoginForm = () => {
 
         <p className="text-center text-gray-600 mt-6">
           Don't have an account?{' '}
-          <a href="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
+          <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium">
             Sign up
-          </a>
+          </Link>
         </p>
       </form>
     </div>
