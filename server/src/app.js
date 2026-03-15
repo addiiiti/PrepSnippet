@@ -30,11 +30,20 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' })); // Allow larger payloads for code
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'PrepSnippet API is running',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Health check route
 app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    success: true, 
-    message: 'Server is running',
+  res.status(200).json({
+    success: true,
+    message: 'Server is healthy',
+    uptime: process.uptime(),
     timestamp: new Date().toISOString()
   });
 });
