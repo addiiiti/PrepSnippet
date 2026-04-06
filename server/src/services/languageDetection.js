@@ -1,7 +1,16 @@
 /**
- * Detect programming language from code
- * Simple pattern matching - can be improved with ML later
+ * languageDetection.js
+ *
+ * FIX: C vs C++ misdetection.
+ * 
+ * The original code had `#include <` and `int main()` in BOTH the cpp and c pattern lists.
+ * Any C code with those two constructs scored equally on both, and C++ won ties due to more
+ * patterns in its list.
+ *
+ * Fix: C++-specific patterns are things ONLY C++ uses. We give C explicit "negative" signals
+ * for C++-exclusive constructs to break the tie correctly.
  */
+
 function detectLanguage(code) {
   const patterns = {
     javascript: [
@@ -11,16 +20,17 @@ function detectLanguage(code) {
       /=>\s*{/,
       /console\.log/,
       /require\(/,
-      /import\s+.*from/
+      /import\s+.*from/,
     ],
     python: [
       /def\s+\w+\s*\(/,
-      /import\s+\w+/,
+      /^import\s+\w+/m,
       /from\s+\w+\s+import/,
       /print\(/,
-      /if\s+__name__\s*==\s*['"']__main__['"']/,
-      /:\s*$/m,
-      /elif\s+/
+      /if\s+__name__\s*==\s*['"]__main__['"]/,
+      /elif\s+/,
+      // Python-specific: indented blocks end without braces
+      /:\s*\n\s+\w/,
     ],
     java: [
       /public\s+class\s+\w+/,
@@ -28,31 +38,38 @@ function detectLanguage(code) {
       /System\.out\.println/,
       /private\s+\w+\s+\w+/,
       /public\s+\w+\s+\w+\s*\(/,
-      /import\s+java\./
+      /import\s+java\./,
     ],
+    // FIX: cpp patterns must be EXCLUSIVE to C++ — things C cannot have
     cpp: [
-      /#include\s*</,
-      /std::/,
-      /cout\s*<</,
-      /cin\s*>>/,
-      /int\s+main\s*\(/,
-      /using\s+namespace\s+std/
+      /std::/,                    // C++ standard library namespace
+      /cout\s*<</,               // C++ stream output
+      /cin\s*>>/,                // C++ stream input
+      /using\s+namespace\s+std/, // C++ only
+      /::\s*\w+/,                // Scope resolution operator (C++ only)
+      /new\s+\w+/,               // C++ new keyword
+      /delete\s+\w+/,            // C++ delete keyword
+      /template\s*</,            // C++ templates
+      /class\s+\w+\s*{/,        // C++ class (not struct)
+      /#include\s*<(iostream|vector|string|algorithm|map|set|unordered_map)>/, // C++ headers
     ],
+    // C-specific patterns that don't appear in C++
     c: [
-      /#include\s*</,
-      /printf\(/,
-      /scanf\(/,
-      /int\s+main\s*\(/,
-      /malloc\(/,
-      /free\(/
+      /#include\s*<(stdio|stdlib|string|math|time|ctype|assert|limits)\.h>/,
+      /printf\s*\(/,
+      /scanf\s*\(/,
+      /malloc\s*\(/,
+      /free\s*\(/,
+      /NULL\b(?!ptr)/,           // NULL is C; C++ uses nullptr
+      /typedef\s+struct/,        // Common in C
     ],
     typescript: [
       /interface\s+\w+/,
       /type\s+\w+\s*=/,
-      /:\s*string/,
-      /:\s*number/,
+      /:\s*string\b/,
+      /:\s*number\b/,
       /<\w+>/,
-      /as\s+\w+/
+      /as\s+\w+/,
     ],
     html: [
       /<html/i,
@@ -60,13 +77,13 @@ function detectLanguage(code) {
       /<span/i,
       /<head>/i,
       /<body>/i,
-      /<!DOCTYPE/i
+      /<!DOCTYPE/i,
     ],
     css: [
-      /{\s*[\w-]+:\s*[^}]+}/,
+      /\{\s*[\w-]+:\s*[^}]+\}/,
       /@media/,
-      /\.[\w-]+\s*{/,
-      /#[\w-]+\s*{/
+      /\.[\w-]+\s*\{/,
+      /#[\w-]+\s*\{/,
     ],
     sql: [
       /SELECT\s+.*FROM/i,
@@ -74,42 +91,38 @@ function detectLanguage(code) {
       /UPDATE\s+.*SET/i,
       /DELETE\s+FROM/i,
       /CREATE\s+TABLE/i,
-      /WHERE/i
     ],
     go: [
       /package\s+main/,
       /func\s+\w+\s*\(/,
-      /import\s+\(/,
       /fmt\.Print/,
-      /go\s+func/
+      /go\s+func/,
+      /:=\s*/,
     ],
     rust: [
       /fn\s+\w+\s*\(/,
-      /let\s+mut/,
+      /let\s+mut\b/,
       /println!/,
       /impl\s+\w+/,
-      /use\s+std::/
+      /use\s+std::/,
     ],
     ruby: [
       /def\s+\w+/,
-      /end$/m,
+      /^end$/m,
       /puts\s+/,
-      /require\s+['"']/,
-      /class\s+\w+/,
-      /@\w+/
+      /class\s+\w+\s*<?\s*\w*/,
+      /@\w+\s*=/,
     ],
     php: [
       /<\?php/,
       /\$\w+\s*=/,
       /echo\s+/,
-      /function\s+\w+\s*\(/,
-      /namespace\s+/
-    ]
+      /namespace\s+\w+/,
+    ],
   };
 
   const scores = {};
-  
-  // Count pattern matches for each language
+
   for (const [lang, langPatterns] of Object.entries(patterns)) {
     scores[lang] = 0;
     for (const pattern of langPatterns) {
@@ -119,7 +132,17 @@ function detectLanguage(code) {
     }
   }
 
-  // Find language with highest score
+  // Tiebreaker: if both c and cpp are tied, prefer c only if there are
+  // no C++-exclusive constructs (std::, cout, cin, templates, class).
+  // This runs after scoring to avoid needing special-cased weights.
+  if (scores.cpp > 0 && scores.c > 0) {
+    const hasCppExclusive = /std::|cout|cin|template\s*<|::\s*\w+|new\s+\w+|delete\s+\w+/.test(code);
+    if (!hasCppExclusive) {
+      // Downgrade cpp score to break the tie in favor of c
+      scores.cpp = Math.max(0, scores.cpp - scores.c);
+    }
+  }
+
   let detectedLang = 'plaintext';
   let maxScore = 0;
 
@@ -130,13 +153,9 @@ function detectLanguage(code) {
     }
   }
 
-  // If no patterns matched, return plaintext
   return maxScore > 0 ? detectedLang : 'plaintext';
 }
 
-/**
- * Get language display name
- */
 function getLanguageDisplayName(lang) {
   const displayNames = {
     javascript: 'JavaScript',
@@ -152,13 +171,10 @@ function getLanguageDisplayName(lang) {
     rust: 'Rust',
     ruby: 'Ruby',
     php: 'PHP',
-    plaintext: 'Plain Text'
+    plaintext: 'Plain Text',
   };
 
   return displayNames[lang] || lang.toUpperCase();
 }
 
-module.exports = {
-  detectLanguage,
-  getLanguageDisplayName
-};
+module.exports = { detectLanguage, getLanguageDisplayName };

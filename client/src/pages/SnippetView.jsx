@@ -1,130 +1,122 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Star, 
-  Trash2, 
-  MessageSquare, 
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Calendar,
+  Edit2,
   Eye,
   EyeOff,
-  Calendar,
-  Code2,
+  MessageSquare,
   RefreshCw,
-  Edit2
+  Star,
+  Trash2,
+  Code2,
+  Lightbulb,
+  AlertTriangle,
+  Zap,
 } from 'lucide-react';
 import Button from '../components/common/Button';
 import snippetService from '../services/snippetService';
 
-// Component to format Q&A answers with code blocks
-const FormattedAnswer = ({ answer }) => {
-  // Split answer into paragraphs and code blocks
-  const formatAnswer = (text) => {
-    const parts = [];
-    const lines = text.split('\n');
-    let currentCodeBlock = [];
-    let currentText = [];
-    
-    const flushText = () => {
-      if (currentText.length > 0) {
-        parts.push({ type: 'text', content: currentText.join('\n') });
-        currentText = [];
-      }
-    };
-    
-    const flushCode = () => {
-      if (currentCodeBlock.length > 0) {
-        parts.push({ type: 'code', content: currentCodeBlock.join('\n') });
-        currentCodeBlock = [];
-      }
-    };
-    
-    // More strict code detection
-    const isCodeLine = (line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return false;
-      
-      // Must have multiple code indicators
-      const codeIndicators = [
-        trimmed.match(/^(for|while|if|else|function|const|let|var|return|class|public|private|protected)\s*[({]/),
-        trimmed.includes('{') && trimmed.includes('}'),
-        trimmed.match(/.*;\s*$/),
-        trimmed.match(/^\s*(int|void|string|bool|char|float|double|vector|map|list)\s+\w+/),
-        trimmed.startsWith('//') || trimmed.startsWith('/*'),
-        trimmed === '}' || trimmed === '{'
-      ].filter(Boolean).length;
-      
-      return codeIndicators >= 1 && (trimmed.includes('{') || trimmed.includes(';') || trimmed.includes('}') || trimmed.match(/^(int|void|return|for|if|while|function|const|let|var|class)/));
-    };
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      
-      if (isCodeLine(line)) {
-        flushText();
-        currentCodeBlock.push(line);
-      } else if (line.trim() === '') {
-        // Empty line - add to current context
-        if (currentCodeBlock.length > 0) {
-          currentCodeBlock.push(line);
-        } else {
-          currentText.push(line);
-        }
-      } else {
-        // If we have less than 3 lines of code, treat as text
-        if (currentCodeBlock.length > 0 && currentCodeBlock.length < 3) {
-          currentText.push(...currentCodeBlock);
-          currentCodeBlock = [];
-        } else {
-          flushCode();
-        }
-        currentText.push(line);
-      }
-    }
-    
-    // Final flush - only keep code blocks with 3+ lines
-    if (currentCodeBlock.length < 3) {
-      currentText.push(...currentCodeBlock);
-      flushText();
-    } else {
-      flushCode();
-      flushText();
-    }
-    
-    return parts;
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-components
+// ─────────────────────────────────────────────────────────────────────────────
+
+const Badge = ({ children, variant = 'default' }) => {
+  const styles = {
+    default: 'bg-gray-100 text-gray-700',
+    blue: 'bg-blue-100 text-blue-700',
+    green: 'bg-emerald-100 text-emerald-700',
+    purple: 'bg-purple-100 text-purple-700',
+    amber: 'bg-amber-100 text-amber-700',
   };
-  
-  const parts = formatAnswer(answer);
-  
+  return (
+    <span className={`px-3 py-1 rounded-full text-sm font-medium ${styles[variant]}`}>
+      {children}
+    </span>
+  );
+};
+
+const ListBlock = ({ items, emptyText, prefix = '•', prefixClass = 'text-gray-400' }) => {
+  if (!items || items.length === 0) {
+    return <p className="text-sm text-gray-400">{emptyText}</p>;
+  }
+  return (
+    <ul className="space-y-2">
+      {items.map((item, i) => (
+        <li key={i} className="text-sm text-gray-700 leading-relaxed flex gap-2">
+          <span className={`${prefixClass} shrink-0 mt-0.5`}>{prefix}</span>
+          <span>{item}</span>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+const FollowUpsSection = ({ followUps }) => {
+  const [openIndexes, setOpenIndexes] = useState([]);
+
+  const toggle = (i) =>
+    setOpenIndexes((prev) =>
+      prev.includes(i) ? prev.filter((x) => x !== i) : [...prev, i]
+    );
+
+  if (!followUps || followUps.length === 0) {
+    return <p className="text-sm text-gray-400">No follow-up questions yet.</p>;
+  }
+
   return (
     <div className="space-y-3">
-      {parts.map((part, index) => {
-        if (part.type === 'code') {
-          return (
-            <pre key={index} className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto">
-              <code className="text-sm font-mono">{part.content}</code>
-            </pre>
-          );
-        } else {
-          return (
-            <p key={index} className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {part.content}
-            </p>
-          );
-        }
+      {followUps.map((item, i) => {
+        const isOpen = openIndexes.includes(i);
+        return (
+          <div key={i} className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Q{i + 1}. {item.question}</p>
+                {item.intent && (
+                  <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">{item.intent}</p>
+                )}
+              </div>
+              <button
+                onClick={() => toggle(i)}
+                className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center gap-1.5 transition-colors shrink-0"
+              >
+                {isOpen ? <><EyeOff size={13} />Hide</> : <><Eye size={13} />Reveal</>}
+              </button>
+            </div>
+            {isOpen && (
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <p className="text-sm text-gray-700 leading-7">{item.answer}</p>
+              </div>
+            )}
+          </div>
+        );
       })}
     </div>
   );
 };
 
+// Tab definitions
+const TABS = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'interview', label: 'Interview Prep', icon: MessageSquare },
+  { id: 'details', label: 'Details' },
+];
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Component
+// ─────────────────────────────────────────────────────────────────────────────
+
 const SnippetView = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [snippet, setSnippet] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [interviewQA, setInterviewQA] = useState(null);
   const [generatingQA, setGeneratingQA] = useState(false);
-  const [visibleAnswers, setVisibleAnswers] = useState([]);
   const [togglingFavorite, setTogglingFavorite] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
     fetchSnippet();
@@ -135,11 +127,7 @@ const SnippetView = () => {
       setLoading(true);
       const response = await snippetService.getById(id);
       setSnippet(response.data.snippet);
-      if (response.data.snippet.interviewQuestions) {
-        setInterviewQA(response.data.snippet.interviewQuestions);
-      }
-    } catch (error) {
-      console.error('Error fetching snippet:', error);
+    } catch {
       navigate('/dashboard');
     } finally {
       setLoading(false);
@@ -149,9 +137,8 @@ const SnippetView = () => {
   const handleGenerateInterview = async () => {
     try {
       setGeneratingQA(true);
-      const response = await snippetService.generateInterview(id);
-      setInterviewQA(response.data.interviewQuestions);
-      setVisibleAnswers([]);
+      await snippetService.generateInterview(id);
+      await fetchSnippet();
     } catch (error) {
       console.error('Error generating interview:', error);
     } finally {
@@ -159,259 +146,314 @@ const SnippetView = () => {
     }
   };
 
-  const toggleAnswer = (index) => {
-    setVisibleAnswers(prev => 
-      prev.includes(index) 
-        ? prev.filter(i => i !== index)
-        : [...prev, index]
-    );
-  };
-
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this snippet?')) {
-      try {
-        await snippetService.delete(id);
-        navigate('/dashboard');
-      } catch (error) {
-        console.error('Error deleting snippet:', error);
-      }
+    if (!window.confirm('Delete this snippet?')) return;
+    try {
+      await snippetService.delete(id);
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error deleting snippet:', error);
     }
   };
 
   const handleToggleFavorite = async () => {
-    if (togglingFavorite) return;
-    
+    if (togglingFavorite || !snippet) return;
     setTogglingFavorite(true);
-    const previousState = snippet.isFavorite;
-    
+    const prev = snippet.isFavorite;
+    setSnippet((s) => ({ ...s, isFavorite: !s.isFavorite }));
     try {
-      const newFavoriteState = !snippet.isFavorite;
-      // Optimistically update UI
-      setSnippet(prev => ({ ...prev, isFavorite: newFavoriteState }));
-      
-      // Make API call
-      await snippetService.update(id, { isFavorite: newFavoriteState });
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      // Revert on error
-      setSnippet(prev => ({ ...prev, isFavorite: previousState }));
-      alert('Failed to update favorite status. Please try again.');
+      await snippetService.update(id, { isFavorite: !prev });
+    } catch {
+      setSnippet((s) => ({ ...s, isFavorite: prev }));
     } finally {
       setTogglingFavorite(false);
     }
   };
 
+  // Merge legacy fields with new structured analysis
+  const analysis = useMemo(() => {
+    if (!snippet) return null;
+    const a = snippet.analysis || {};
+    const fallbackFollowUps = (snippet.interviewQuestions || []).map((q) => ({
+      question: q.question,
+      answer: q.answer,
+      intent: '',
+    }));
+
+    return {
+      summary: a.summary || snippet.aiExplanation || '',
+      pattern: a.pattern || '',
+      whyItWorks: a.whyItWorks || '',
+      interviewPitch30Sec: a.interviewPitch30Sec || '',
+      complexity: {
+        time: a.complexity?.time || '',
+        space: a.complexity?.space || '',
+        reasoning: a.complexity?.reasoning || snippet.complexity || '',
+      },
+      edgeCases: a.edgeCases || [],
+      commonMistakes: a.commonMistakes || [],
+      optimizations: a.optimizations || [],
+      followUps: a.followUps?.length > 0 ? a.followUps : fallbackFollowUps,
+      tags: a.tags?.length > 0 ? a.tags : snippet.aiTags || [],
+    };
+  }, [snippet]);
+
+  // ── Loading ──────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="min-h-screen bg-gray-50 px-4 py-10">
+        <div className="max-w-6xl mx-auto animate-pulse space-y-4">
+          <div className="h-7 w-48 bg-gray-200 rounded" />
+          <div className="h-24 bg-gray-200 rounded-xl" />
+          <div className="h-80 bg-gray-200 rounded-xl" />
+        </div>
       </div>
     );
   }
 
-  if (!snippet) {
-    return null;
-  }
+  if (!snippet) return null;
 
   const formattedDate = new Date(snippet.createdAt).toLocaleDateString('en-US', {
-    month: 'long',
+    month: 'short',
     day: 'numeric',
-    year: 'numeric'
+    year: 'numeric',
   });
 
+  // ── Render ───────────────────────────────────────────────────────────────
+
   return (
-    <div className="min-h-screen px-4 py-8 bg-gray-50">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-gray-50 px-4 py-8">
+      <div className="max-w-6xl mx-auto">
+
+        {/* Back */}
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-gray-600 hover:text-blue-600 mb-6 transition-colors"
+          className="flex items-center gap-2 text-gray-500 hover:text-blue-600 mb-5 transition-colors text-sm"
         >
-          <ArrowLeft className="w-5 h-5" />
-          Back to Dashboard
+          <ArrowLeft size={16} />
+          Dashboard
         </button>
 
-        {/* Title and Actions */}
-        <div className="flex items-start justify-between mb-6">
+        {/* Title + Actions */}
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
           <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              {snippet.title}
-            </h1>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <h1 className="text-2xl font-bold text-gray-900">{snippet.title}</h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2 text-sm text-gray-500">
+              <Badge variant="blue">{snippet.language}</Badge>
+              {analysis?.pattern && <Badge variant="purple">{analysis.pattern}</Badge>}
+              {analysis?.complexity?.time && (
+                <Badge variant="green">T: {analysis.complexity.time}</Badge>
+              )}
+              {analysis?.complexity?.space && (
+                <Badge variant="amber">S: {analysis.complexity.space}</Badge>
+              )}
               <span className="flex items-center gap-1">
-                <Code2 className="w-4 h-4" />
-                {snippet.language}
+                <Eye size={13} /> {snippet.viewCount}
               </span>
               <span className="flex items-center gap-1">
-                <Eye className="w-4 h-4" />
-                {snippet.viewCount} views
-              </span>
-              <span className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
-                {formattedDate}
+                <Calendar size={13} /> {formattedDate}
               </span>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => navigate(`/edit-snippet/${id}`)}
               className="p-2 bg-white border border-gray-200 hover:bg-blue-50 hover:border-blue-300 rounded-lg transition-all"
-              title="Edit snippet"
+              title="Edit"
             >
-              <Edit2 className="w-5 h-5 text-gray-600" />
+              <Edit2 size={16} className="text-gray-600" />
             </button>
             <button
               onClick={handleToggleFavorite}
-              disabled={togglingFavorite}
-              className="p-2 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              title={snippet.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+              className={`p-2 border rounded-lg transition-all ${
+                snippet.isFavorite
+                  ? 'bg-yellow-50 border-yellow-300'
+                  : 'bg-white border-gray-200 hover:bg-yellow-50'
+              }`}
+              title="Favorite"
             >
-              <Star 
-                className={`w-5 h-5 transition-all ${snippet.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} ${togglingFavorite ? 'opacity-50' : ''}`} 
+              <Star
+                size={16}
+                className={snippet.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-500'}
               />
             </button>
             <button
               onClick={handleDelete}
-              className="p-2 bg-white border border-gray-200 hover:bg-red-50 hover:border-red-300 text-red-600 rounded-lg transition-all"
+              className="p-2 bg-white border border-gray-200 hover:bg-red-50 hover:border-red-200 rounded-lg transition-all"
+              title="Delete"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 size={16} className="text-red-500" />
             </button>
           </div>
         </div>
 
-        {/* Code Block */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">Code</h2>
-            {snippet.complexity && (
-              <span className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-full">
-                {snippet.complexity}
-              </span>
-            )}
-          </div>
-          <div className="bg-gray-50 rounded-lg p-4">
-            <pre className="text-sm text-gray-800 overflow-x-auto">
+        {/* Main layout: Code left, tabs right */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+
+          {/* Code panel — always visible */}
+          <div className="bg-white border border-gray-200 rounded-xl p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <Code2 size={16} className="text-blue-600" />
+              <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Code</h2>
+            </div>
+            <pre className="bg-gray-950 text-gray-100 rounded-xl p-4 overflow-x-auto text-sm leading-6">
               <code>{snippet.code}</code>
             </pre>
-          </div>
-        </div>
 
-        {/* AI Explanation */}
-        {snippet.aiExplanation && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">
-              AI Explanation
-            </h2>
-            <p className="text-gray-700 leading-relaxed">
-              {snippet.aiExplanation}
-            </p>
+            {/* Tags below code */}
+            {analysis?.tags?.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-4 pt-4 border-t border-gray-100">
+                {analysis.tags.map((tag, i) => <Badge key={i}>{tag}</Badge>)}
+              </div>
+            )}
           </div>
-        )}
 
-        {/* Tags */}
-        {(snippet.aiTags?.length > 0 || snippet.customTags?.length > 0) && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Tags</h2>
-            <div className="flex flex-wrap gap-2">
-              {snippet.aiTags?.map((tag, index) => (
-                <span
-                  key={`ai-${index}`}
-                  className="px-3 py-1 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-full"
+          {/* Right panel: Tabbed */}
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            {/* Tab bar */}
+            <div className="flex border-b border-gray-200">
+              {TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-3 px-2 text-sm font-medium transition-colors ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/40'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
                 >
-                  {tag}
-                </span>
-              ))}
-              {snippet.customTags?.map((tag, index) => (
-                <span
-                  key={`custom-${index}`}
-                  className="px-3 py-1 bg-green-50 border border-green-200 text-green-700 text-sm rounded-full"
-                >
-                  {tag}
-                </span>
+                  {tab.label}
+                </button>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* Notes */}
-        {snippet.notes && (
-          <div className="bg-white border border-gray-200 rounded-xl p-6 mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Notes</h2>
-            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-              {snippet.notes}
-            </p>
-          </div>
-        )}
+            {/* Tab content */}
+            <div className="p-5 space-y-5">
 
-        {/* Interview Q&A */}
-        <div className="bg-white border border-gray-200 rounded-xl p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-blue-600" />
-              Interview Questions
-            </h2>
-            {interviewQA && (
-              <Button
-                onClick={handleGenerateInterview}
-                disabled={generatingQA}
-                variant="secondary"
-                className="flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${generatingQA ? 'animate-spin' : ''}`} />
-                {generatingQA ? 'Regenerating...' : 'Regenerate Q&A'}
-              </Button>
-            )}
-            {!interviewQA && (
-              <Button
-                onClick={handleGenerateInterview}
-                disabled={generatingQA}
-                variant="secondary"
-              >
-                {generatingQA ? 'Generating...' : 'Generate Q&A'}
-              </Button>
-            )}
-          </div>
-
-          {interviewQA ? (
-            <div className="space-y-6">
-              {interviewQA.map((qa, index) => (
-                <div key={index} className="border-l-2 border-blue-500 pl-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900 flex-1">
-                      Q: {qa.question}
-                    </h3>
-                    <button
-                      onClick={() => toggleAnswer(index)}
-                      className="ml-4 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm flex items-center gap-1 transition-colors"
-                    >
-                      {visibleAnswers.includes(index) ? (
-                        <>
-                          <EyeOff className="w-4 h-4" />
-                          Hide
-                        </>
-                      ) : (
-                        <>
-                          <Eye className="w-4 h-4" />
-                          Show
-                        </>
-                      )}
-                    </button>
-                  </div>
-                  {visibleAnswers.includes(index) && (
-                    <div className="mt-3">
-                      <span className="font-semibold text-gray-900">A: </span>
-                      <FormattedAnswer answer={qa.answer} />
+              {/* ── Overview tab ── */}
+              {activeTab === 'overview' && (
+                <>
+                  {analysis?.summary && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">What it does</p>
+                      <p className="text-sm text-gray-700 leading-7">{analysis.summary}</p>
                     </div>
                   )}
-                </div>
-              ))}
+
+                  {analysis?.whyItWorks && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Why it works</p>
+                      <p className="text-sm text-gray-700 leading-7">{analysis.whyItWorks}</p>
+                    </div>
+                  )}
+
+                  {(analysis?.complexity?.time || analysis?.complexity?.space) && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Complexity</p>
+                      <div className="flex gap-3 mb-2">
+                        {analysis.complexity.time && (
+                          <Badge variant="green">Time: {analysis.complexity.time}</Badge>
+                        )}
+                        {analysis.complexity.space && (
+                          <Badge variant="amber">Space: {analysis.complexity.space}</Badge>
+                        )}
+                      </div>
+                      {analysis.complexity.reasoning && (
+                        <p className="text-sm text-gray-500 leading-6">{analysis.complexity.reasoning}</p>
+                      )}
+                    </div>
+                  )}
+
+                  {snippet.notes && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Your Notes</p>
+                      <p className="text-sm text-gray-700 leading-7 whitespace-pre-line">{snippet.notes}</p>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ── Interview Prep tab ── */}
+              {activeTab === 'interview' && (
+                <>
+                  {analysis?.interviewPitch30Sec && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                        30-Second Pitch
+                      </p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                        <p className="text-sm text-blue-900 leading-7 italic">
+                          "{analysis.interviewPitch30Sec}"
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <MessageSquare size={12} /> Follow-up Questions
+                      </p>
+                      <button
+                        onClick={handleGenerateInterview}
+                        disabled={generatingQA}
+                        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw size={11} className={generatingQA ? 'animate-spin' : ''} />
+                        Regenerate
+                      </button>
+                    </div>
+                    <FollowUpsSection followUps={analysis?.followUps} />
+                  </div>
+                </>
+              )}
+
+              {/* ── Details tab ── */}
+              {activeTab === 'details' && (
+                <>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <AlertTriangle size={12} /> Edge Cases
+                    </p>
+                    <ListBlock
+                      items={analysis?.edgeCases}
+                      emptyText="No edge cases available."
+                      prefix="→"
+                    />
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                      <Lightbulb size={12} /> Common Mistakes
+                    </p>
+                    <ListBlock
+                      items={analysis?.commonMistakes}
+                      emptyText="No common mistakes available."
+                      prefix="!"
+                      prefixClass="text-red-400"
+                    />
+                  </div>
+
+                  {analysis?.optimizations?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <Zap size={12} /> Optimizations
+                      </p>
+                      <ListBlock
+                        items={analysis.optimizations}
+                        emptyText="No optimizations."
+                        prefix="↑"
+                        prefixClass="text-emerald-500"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+
             </div>
-          ) : (
-            <p className="text-center text-gray-500 py-8">
-              Click "Generate Q&A" to create interview questions for this snippet
-            </p>
-          )}
+          </div>
         </div>
       </div>
     </div>
