@@ -262,8 +262,5 @@ VITE_API_URL=your_backend_url
 
 **⭐ If you find this project useful, please give it a star on GitHub!**
 
-Aditi Kumari - BTech CSE, 6th Semester  
-MUJ
-
 ---
 
