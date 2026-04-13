@@ -5,6 +5,7 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import LandingPage from './pages/LandingPage'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
+import InstallExtensionPage from './pages/InstallExtensionPage'
 import Dashboard from './pages/Dashboard'
 import AddSnippet from './pages/AddSnippet'
 import EditSnippet from './pages/EditSnippet'
@@ -34,6 +35,7 @@ function App() {
           <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" /> : <LandingPage />} />
           <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
           <Route path="/signup" element={!isAuthenticated ? <SignupPage /> : <Navigate to="/dashboard" />} />
+          <Route path="/install-extension" element={<InstallExtensionPage />} />
           
           <Route 
             path="/dashboard" 

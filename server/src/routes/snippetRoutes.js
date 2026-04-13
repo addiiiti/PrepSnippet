@@ -11,16 +11,16 @@ const {
 } = require('../controllers/snippetController');
 const { protect } = require('../middleware/authMiddleware');
 
-// All routes are protected (require authentication)
+// Public analyze route for extension and web clients
+router.post('/analyze', analyzeCode); // POST /api/snippets/analyze
+
+// All routes below are protected (require authentication)
 router.use(protect);
 
 // Snippet CRUD
 router.route('/')
   .get(getSnippets)      // GET /api/snippets
   .post(createSnippet);  // POST /api/snippets
-
-// Analyze code (must be before /:id route)
-router.post('/analyze', analyzeCode); // POST /api/snippets/analyze
 
 router.route('/:id')
   .get(getSnippet)       // GET /api/snippets/:id

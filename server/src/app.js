@@ -10,6 +10,33 @@ const snippetRoutes = require('./routes/snippetRoutes');
 
 const app = express();
 
+const allowedWebOrigins = new Set(
+  [
+    process.env.CLIENT_URL || 'http://localhost:3000',
+    'http://localhost:5173',
+    ...(process.env.CORS_ALLOWED_ORIGINS || '').split(','),
+  ]
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
+
+const allowedExtensionIds = (process.env.CHROME_EXTENSION_IDS || '')
+  .split(',')
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+const isAllowedChromeExtensionOrigin = (origin) => {
+  if (!origin || !origin.startsWith('chrome-extension://')) return false;
+
+  const extensionId = origin.replace('chrome-extension://', '').replace('/', '');
+  if (!extensionId) return false;
+
+  // If no IDs configured, allow extension origins for local MVP development.
+  if (allowedExtensionIds.length === 0) return true;
+
+  return allowedExtensionIds.includes(extensionId);
+};
+
 // Security middleware
 app.use(helmet());
 
@@ -22,7 +49,19 @@ app.use('/api/', limiter);
 
 // CORS
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedWebOrigins.has(origin) || isAllowedChromeExtensionOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(new Error('Origin not allowed by CORS'));
+  },
   credentials: true
 }));
 

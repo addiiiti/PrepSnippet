@@ -24,34 +24,47 @@ const Hero = () => {
           Save, organize, and master your coding knowledge.
         </p>
 
+        <p className="text-base md:text-lg text-blue-700 font-medium mb-10 max-w-3xl mx-auto">
+          Analyze code directly from LeetCode, GitHub, docs, and blogs.
+        </p>
+
         {/* CTA buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <Link
-            to="/signup"
-            className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold text-lg transition-all duration-300 shadow-lg shadow-blue-500/50 flex items-center gap-2"
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Link
+              to="/signup"
+              className="group px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-full font-semibold text-lg transition-all duration-300 shadow-lg shadow-blue-500/50 flex items-center gap-2"
+            >
+              Get Started Free
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link
+              to="/login"
+              className="px-8 py-4 border-2 border-blue-600 hover:bg-blue-50 text-blue-600 rounded-full font-semibold text-lg transition-all duration-300"
+            >
+              Login
+            </Link>
+          </div>
+
+          <a
+            href="#browser-extension"
+            className="inline-flex items-center gap-2 px-5 py-2 rounded-full border border-blue-200 bg-blue-50 text-blue-700 font-medium text-sm hover:bg-blue-100 transition-colors"
           >
-            Get Started Free
-            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-          </Link>
-          <Link
-            to="/login"
-            className="px-8 py-4 border-2 border-blue-600 hover:bg-blue-50 text-blue-600 rounded-full font-semibold text-lg transition-all duration-300"
-          >
-            Login
-          </Link>
+            See Browser Extension Workflow
+          </a>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-8 mt-20 max-w-2xl mx-auto">
-          <div className="text-center">
+        <div className="grid grid-cols-3 gap-4 md:gap-8 mt-20 max-w-3xl mx-auto">
+          <div className="text-center rounded-2xl border border-blue-100 bg-blue-50/50 p-4 md:p-6">
             <div className="text-4xl font-bold text-gradient mb-2">AI</div>
             <div className="text-sm text-gray-600">Auto-Tagging</div>
           </div>
-          <div className="text-center">
+          <div className="text-center rounded-2xl border border-blue-100 bg-blue-50/50 p-4 md:p-6">
             <div className="text-4xl font-bold text-gradient mb-2">Instant</div>
             <div className="text-sm text-gray-600">Explanations</div>
           </div>
-          <div className="text-center">
+          <div className="text-center rounded-2xl border border-blue-100 bg-blue-50/50 p-4 md:p-6">
             <div className="text-4xl font-bold text-gradient mb-2">Free</div>
             <div className="text-sm text-gray-600">Interview Prep</div>
           </div>
