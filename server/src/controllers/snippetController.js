@@ -58,9 +58,15 @@ const getSnippet = async (req, res, next) => {
       return res.status(403).json({ success: false, message: 'Not authorized to access this snippet' });
     }
 
-    snippet.viewCount += 1;
-    snippet.lastViewed = Date.now();
-    await snippet.save();
+    const lastViewedAt = snippet.lastViewed ? new Date(snippet.lastViewed).getTime() : 0;
+    const now = Date.now();
+    const shouldIncrementView = snippet.viewCount === 0 || now - lastViewedAt > 1500;
+
+    if (shouldIncrementView) {
+      snippet.viewCount += 1;
+      snippet.lastViewed = now;
+      await snippet.save();
+    }
 
     res.status(200).json({ success: true, data: { snippet } });
   } catch (error) {
@@ -79,15 +85,13 @@ const createSnippet = async (req, res, next) => {
       });
     }
 
-    // FIX 1: detectedLang was never declared — this was causing the crash
+    // FIX 1: detectedLang 
     const detectedLang = language || detectLanguage(code);
-
-    // FIX 2: aiAnalysis was never declared with let — caused ReferenceError
     let aiAnalysis;
 
     if (clientAnalysis && clientAnalysis.summary) {
       // Client sent pre-analyzed data (user already reviewed it on screen)
-      // Use it directly — do NOT run AI again
+      // Use it directly
       aiAnalysis = {
         analysis: clientAnalysis,
         aiTags: Array.isArray(clientAnalysis.tags) ? clientAnalysis.tags.slice(0, 3) : [],

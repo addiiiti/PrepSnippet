@@ -1,17 +1,11 @@
-/**
- * llama.js
- * 
- * Uses Groq's llama-3.3-70b-versatile — the strongest free model on Groq.
- * Drop-in replacement. No other files need to change.
- * 
- * ONLY change from your original: model name + prompt quality.
+/*
+ llama.js
+ Uses Groq's llama-3.3-70b-versatile — the strongest free model on Groq.
  */
 
 const Groq = require('groq-sdk');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 const MODEL = 'llama-3.3-70b-versatile';
-// ─────────────────────────────────────────────────────────────────────────────
-
 //Pattern-specific hints injected into the prompt.
 function getPatternHints(pattern) {
   const hints = {
@@ -57,7 +51,7 @@ GRID DFS RULES:
   return hints[pattern] || '';
 }
 
-/**
+/*
  * Step 1 prompt: Classify the code cheaply before full analysis.
  * Keeps full analysis prompt focused.
  */
@@ -177,9 +171,7 @@ Reply with ONLY a raw JSON object. No markdown. No explanation outside the JSON.
 }`;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 // API CALL HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
 
 function emptyAnalysis() {
   return {
@@ -255,14 +247,14 @@ async function callGroq(prompt, temperature = 0.2) {
   return completion.choices[0]?.message?.content?.trim() || '';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MAIN EXPORT — called by aiService.js, no changes needed there
-// ─────────────────────────────────────────────────────────────────────────────
+
+// MAIN EXPORT — called by aiService.js
+
 
 async function generateStructuredAnalysis(code, language, options = {}) {
   const { strictMode = false } = options;
 
-  // ── Step 1: Classify (skip if classification already provided from retry) ──
+  // ─ Step 1: Classify ─
   let classification = options.classification;
 
   if (!classification) {
@@ -281,7 +273,7 @@ async function generateStructuredAnalysis(code, language, options = {}) {
     }
   }
 
-  // ── Step 2: Full analysis ──────────────────────────────────────────────────
+  // ─ Step 2: Full analysis ─
   let rawText = '';
   let analysis = emptyAnalysis();
 
