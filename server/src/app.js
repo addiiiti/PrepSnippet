@@ -14,6 +14,8 @@ const allowedWebOrigins = new Set(
   [
     process.env.CLIENT_URL || 'http://localhost:3000',
     'http://localhost:5173',
+    'https://addiiiti.github.io',
+    'https://addiiiti.github.io/PrepSnippet',
     ...(process.env.CORS_ALLOWED_ORIGINS || '').split(','),
   ]
     .map((origin) => origin.trim())
